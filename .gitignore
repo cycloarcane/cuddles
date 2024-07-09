@@ -1,3 +1,5 @@
 UserIntelRequest/venv/
 .env
-README.md
+venv/
+data/
+LICENCE
