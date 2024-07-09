@@ -9,7 +9,7 @@ api_key = os.getenv("OPENAI_API_KEY")
 # Initialize the OpenAI client with the custom API endpoint
 client = OpenAI(
     api_key=api_key,
-    base_url="https://criticism-comfort-films-phase.trycloudflare.com/v1/"
+    base_url="https://place-waiting-cooper-ssl.trycloudflare.com/v1/"
 )
 
 # Function to display ASCII art
@@ -39,7 +39,7 @@ def generate_nmap_command(ips_and_domains):
     response = client.chat.completions.create(
         model="gpt-4",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=50
+        max_tokens=1000
     )
     print(response)  # Debugging: Print the response to check its structure
     return response.choices[0].message.content.strip()
