@@ -64,12 +64,12 @@ def get_tool_decision(scan_results, tools):
     return decision
 
 # Function to run the selected tool
-def run_tool(tool):
+def run_tool(tool, org_name):
     tool_path = os.path.join('./tools', tool)
     if os.path.isfile(tool_path):
-        print(f"Running tool: python3 {tool_path}")
+        print(f"Running tool: python3 {tool_path} {org_name}")
         # Running the tool and allowing output to be printed in real-time
-        result = subprocess.run(f"python3 {tool_path}", shell=True)
+        result = subprocess.run(f"python3 {tool_path} {org_name}", shell=True)
         if result.returncode != 0:
             print(f"Tool {tool} exited with errors.")
     else:
@@ -116,8 +116,8 @@ def main():
     tool_name = decision.split('\n')[0].strip('`')
     print(f"Selected tool: {tool_name}")
 
-    # Run the selected tool
-    run_tool(tool_name)
+    # Run the selected tool with the organisation name
+    run_tool(tool_name, org_name)
 
 if __name__ == "__main__":
     main()
