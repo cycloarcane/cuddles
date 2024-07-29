@@ -6,6 +6,7 @@ import time
 import requests
 import paramiko
 from openai import OpenAI
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Ensure the OpenAI API key is set
 api_key = os.getenv("OPENAI_API_KEY")
@@ -96,17 +97,17 @@ def show_progress():
         if stop_event.is_set():
             break
 
-# Function to get tool decision from LLM
-def get_tool_decision(scan_results, tools):
+# Function to get tool decision from LLM for a specific port
+def get_tool_decision_for_port(port, tools):
     prompt = f"""
-    Based on the following nmap scan results and the available tools, decide which tool is most appropriate to run:
-    
-    Nmap Scan Results:
-    {scan_results}
-    
+    Based on the open port {port} detected by nmap, the description of the service running on that port and the available tools, decide which tool is most appropriate to run:
+
+    Open Port:
+    {port}
+
     Available Tools:
     {tools}
-    
+
     Please respond with just the name of the appropriate tool to run, and only the filename.
     """
     response = client.chat.completions.create(
@@ -212,11 +213,15 @@ def main():
 
     # Stage 3: Active Phase
     tools = os.listdir('./tools')
-    decision = get_tool_decision(scan_result, tools)
-    tool_name = decision.split('\n')[0].strip('`')
+    with ThreadPoolExecutor() as executor:
+        futures = []
+        for port in open_ports:
+            futures.append(executor.submit(get_tool_decision_for_port, port, tools))
 
-    print(f"Selected tool: {tool_name}")
-    run_tool(tool_name, org_name)
+        for future in as_completed(futures):
+            tool_name = future.result().split('\n')[0].strip('`')
+            print(f"Selected tool for port: {tool_name}")
+            run_tool(tool_name, org_name)
 
 if __name__ == "__main__":
     main()
