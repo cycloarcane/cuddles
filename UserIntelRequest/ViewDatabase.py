@@ -1,4 +1,5 @@
-import curses
+from rich.console import Console
+from rich.table import Table
 import chromadb
 
 def cuddles_art():
@@ -13,92 +14,54 @@ def cuddles_art():
 """
     return art
 
-def list_documents(stdscr, client, collection_name):
+def list_documents(console, client, collection_name):
     collection_name = collection_name.lower().replace(' ', '_')
     collection = client.get_collection(name=collection_name)
-
     documents = collection.get(include=["documents", "metadatas"])
-    row = 2
 
-    stdscr.clear()
-    stdscr.addstr(0, 0, f"Documents in collection: {collection_name}\n")
+    table = Table(title=f"Documents in collection: {collection_name}")
+    table.add_column("ID", justify="center")
+    table.add_column("Document", justify="center")
+    table.add_column("Metadata", justify="center")
 
     for i in range(len(documents["documents"])):
-        if row >= curses.LINES - 2:
-            stdscr.addstr(curses.LINES - 1, 0, "Press any key to see more...")
-            stdscr.refresh()
-            stdscr.getch()
-            stdscr.clear()
-            stdscr.addstr(0, 0, f"Documents in collection: {collection_name}\n")
-            row = 2
+        table.add_row(str(i), documents["documents"][i], str(documents["metadatas"][i]))
 
-        stdscr.addstr(row, 0, f"ID: {i}")
-        row += 1
-        stdscr.addstr(row, 0, f"Document: {documents['documents'][i]}")
-        row += 1
-        stdscr.addstr(row, 0, f"Metadata: {documents['metadatas'][i]}")
-        row += 1
-        stdscr.addstr(row, 0, "-" * 50)
-        row += 1
-
-    stdscr.addstr(curses.LINES - 1, 0, "Press any key to exit...")
-    stdscr.refresh()
-    stdscr.getch()
+    console.print(table)
 
 def get_collections(client):
     collections = client.list_collections()
     return [col.name for col in collections]
 
-def display_menu(stdscr, collections):
-    curses.curs_set(0)
-    stdscr.clear()
-    stdscr.refresh()
-
-    current_row = 0
+def display_menu(console, collections):
+    console.print("VIEW DATABASE", style="bold")
+    for idx, collection in enumerate(collections):
+        console.print(f"[{idx}] {collection}")
 
     while True:
-        stdscr.clear()
-        stdscr.addstr(0, 0, "VIEW DATABASE")
-        for idx, row in enumerate(collections):
-            if idx == current_row:
-                stdscr.addstr(idx + 1, 0, f"> {row}", curses.A_REVERSE)
-            else:
-                stdscr.addstr(idx + 1, 0, row)
-        
-        key = stdscr.getch()
-
-        if key == curses.KEY_UP and current_row > 0:
-            current_row -= 1
-        elif key == curses.KEY_DOWN and current_row < len(collections) - 1:
-            current_row += 1
-        elif key == curses.KEY_ENTER or key in [10, 13]:
-            return collections[current_row]
-        elif key in [27, ord('q')]:  # ESC or 'q' to exit
+        choice = console.input("\nSelect a collection (or type 'exit' to quit): ")
+        if choice.isdigit() and int(choice) < len(collections):
+            return collections[int(choice)]
+        elif choice.lower() == 'exit':
             return None
+        else:
+            console.print("Invalid selection. Please try again.")
 
-        stdscr.refresh()
-
-def main(stdscr):
-    stdscr.clear()
-    stdscr.addstr(0, 0, cuddles_art())
-    stdscr.refresh()
+def main():
+    console = Console()
+    console.print(cuddles_art(), style="bold cyan")
 
     client = chromadb.PersistentClient(path="./data")
     collections = get_collections(client)
 
     if not collections:
-        stdscr.addstr(1, 0, "No collections found.")
-        stdscr.refresh()
-        stdscr.getch()
+        console.print("No collections found.", style="bold red")
         return
 
-    selected_collection = display_menu(stdscr, collections)
+    selected_collection = display_menu(console, collections)
 
     if selected_collection is not None:
-        stdscr.clear()
-        stdscr.addstr(0, 0, f"Documents in collection: {selected_collection}")
-        stdscr.refresh()
-        list_documents(stdscr, client, selected_collection)
+        list_documents(console, client, selected_collection)
 
 if __name__ == "__main__":
-    curses.wrapper(main)
+    main()
