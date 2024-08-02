@@ -10,9 +10,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Ensure the OpenAI API key is set
 api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    raise ValueError("OpenAI API key not found. Please set the OPENAI_API_KEY environment variable.")
 
 # Initialize the OpenAI client with the custom API endpoint
-client = OpenAI()
+try:
+    client = OpenAI(api_key=api_key)
+except Exception as e:
+    raise ConnectionError(f"Failed to initialize OpenAI client: {e}")
 
 # ASCII Art Function
 def cuddles_art():
@@ -20,11 +25,10 @@ def cuddles_art():
  ██████ ██    ██ ██████  ██████  ██      ███████ ███████     
 ██      ██    ██ ██   ██ ██   ██ ██      ██      ██          
 ██      ██    ██ ██   ██ ██   ██ ██      █████   ███████     
-██      ██    ██ ██   ██ ██   ██ ██      ██           ██     
+██      ██    ██ ██   ██ ██   ██ ██           ██     
  ██████  ██████  ██████  ██████  ███████ ███████ ███████     
                                                              
-                                                                                      
-"""
+    """
     return art
 
 # Function to get user input
@@ -35,20 +39,29 @@ def get_user_input(prompt):
 # Function to initialize ChromaDB
 def initialize_chromadb(client, collection_name):
     collection_name = collection_name.lower().replace(' ', '_')
-    collection = client.get_or_create_collection(name=collection_name)
+    try:
+        collection = client.get_or_create_collection(name=collection_name)
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize ChromaDB collection: {e}")
     return collection
 
 # Function to save data to ChromaDB
 def save_to_chromadb(collection, data):
     documents = [f"{key}: {value}" for key, value in data.items() if value != "Not provided"]
     ids = [f"{data.get('Organisation name', 'unknown')}_{i}" for i in range(len(documents))]
-    collection.add(documents=documents, ids=ids)
+    try:
+        collection.add(documents=documents, ids=ids)
+    except Exception as e:
+        raise RuntimeError(f"Failed to save data to ChromaDB: {e}")
 
 # Function to connect to ChromaDB and retrieve collection data
 def get_chromadb_data(collection_name):
-    chromadb_client = chromadb.PersistentClient(path="./data")
-    collection = chromadb_client.get_or_create_collection(name=collection_name.lower().replace(' ', '_'))
-    documents = collection.get(ids=None)
+    try:
+        chromadb_client = chromadb.PersistentClient(path="./data")
+        collection = chromadb_client.get_or_create_collection(name=collection_name.lower().replace(' ', '_'))
+        documents = collection.get(ids=None)
+    except Exception as e:
+        raise RuntimeError(f"Failed to retrieve ChromaDB data: {e}")
     return collection, documents['documents']
 
 # Function to parse nmap results for open ports
@@ -63,13 +76,13 @@ def parse_nmap_results(scan_results):
 # Function to run nmap scan
 def run_nmap_scan(command):
     try:
-        print("\nRunning nmap command:")  # Improved: Print the command in a new line
-        print(command)  # Improved: Print the command being run
-        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=300)  # Set a timeout
-        print("\nnmap command stdout:")  # Improved: Print in a new line
-        print(result.stdout)  # Print the standard output of the command
-        print("\nnmap command stderr:")  # Improved: Print in a new line
-        print(result.stderr)  # Print the standard error of the command
+        print("\nRunning nmap command:")
+        print(command)
+        result = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=300)
+        print("\nnmap command stdout:")
+        print(result.stdout)
+        print("\nnmap command stderr:")
+        print(result.stderr)
         if result.returncode != 0:
             print(f"nmap command failed with return code {result.returncode}")
         return result.stdout
@@ -86,7 +99,10 @@ def save_scan_results_to_chromadb(collection, org_name, scan_results):
     document_content = f"Organization Name: {org_name}\nScan Results:\n{scan_results}"
     documents = [document_content]
     ids = [document_id]
-    collection.add(documents=documents, ids=ids)
+    try:
+        collection.add(documents=documents, ids=ids)
+    except Exception as e:
+        raise RuntimeError(f"Failed to save scan results to ChromaDB: {e}")
 
 # Function to display progress
 def show_progress():
@@ -110,21 +126,27 @@ def get_tool_decision_for_port(port, tools):
 
     Please respond with just the name of the appropriate tool to run, and only the filename.
     """
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=1000
-    )
-    decision = response.choices[0].message.content.strip()
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=1000
+        )
+        decision = response.choices[0].message.content.strip()
+    except Exception as e:
+        raise RuntimeError(f"Failed to get tool decision from OpenAI: {e}")
     return decision
 
 # Function to run the selected tool
 def run_tool(tool, org_name):
     tool_path = os.path.join('./tools', tool)
     if os.path.isfile(tool_path):
-        result = subprocess.run(f"python3 {tool_path} {org_name}", shell=True)
-        if result.returncode != 0:
-            print(f"Tool {tool} exited with errors.")
+        try:
+            result = subprocess.run(f"python3 {tool_path} {org_name}", shell=True)
+            if result.returncode != 0:
+                print(f"Tool {tool} exited with errors.")
+        except Exception as e:
+            print(f"Failed to run tool {tool}: {e}")
     else:
         print(f"Tool {tool} not found in the ./tools directory.")
 
@@ -133,7 +155,7 @@ def main():
     print(cuddles_art())
     print("Welcome to cuddles. Please provide information about the target.")
     print("If you don't have a piece of information simply press return for the next question.")
-    print("You must enter an organisation name:")
+    print("You must enter an organisation name.")
 
     # Stage 1: User Intel Request
     questions = {
@@ -158,19 +180,28 @@ def main():
         print("Organisation name is required. Exiting.")
         return
 
-    # Initialize ChromaDB client and get the collection
-    client = chromadb.PersistentClient(path="./data")
-    collection = initialize_chromadb(client, org_name)
+    try:
+        client = chromadb.PersistentClient(path="./data")
+        collection = initialize_chromadb(client, org_name)
+    except Exception as e:
+        print(f"Failed to initialize ChromaDB client: {e}")
+        return
 
-    # Save to ChromaDB
-    save_to_chromadb(collection, responses)
-    print(f"Information saved to the database under collection '{org_name}'")
+    try:
+        save_to_chromadb(collection, responses)
+        print(f"Information saved to the database under collection '{org_name}'")
+    except Exception as e:
+        print(f"Failed to save information to the database: {e}")
+        return
 
-    # Stage 2: Extract and Scan
     print("Starting the process to retrieve information and run nmap scan.")
-    collection, documents = get_chromadb_data(org_name)
-    if not documents:
-        print(f"No data found for organisation '{org_name}'. Exiting.")
+    try:
+        collection, documents = get_chromadb_data(org_name)
+        if not documents:
+            print(f"No data found for organisation '{org_name}'. Exiting.")
+            return
+    except Exception as e:
+        print(f"Failed to retrieve data from the database: {e}")
         return
 
     ips_and_domains = []
@@ -183,7 +214,6 @@ def main():
         print(f"No IP addresses or domains found for organisation '{org_name}'. Exiting.")
         return
 
-    # Shallow scan
     shallow_scan_command = f"nmap {' '.join(ips_and_domains)} -sV -sC"
     global stop_event
     stop_event = threading.Event()
@@ -196,7 +226,6 @@ def main():
 
     open_ports = parse_nmap_results(scan_result)
     if not open_ports:
-        # Deeper scan if no open ports found
         deep_scan_command = f"nmap {' '.join(ips_and_domains)} -p- -sC -sV"
         print("No open ports found with shallow scan. Performing deeper scan.")
         stop_event = threading.Event()
@@ -209,9 +238,12 @@ def main():
 
     print("\nNmap scan results:")
     print(scan_result)
-    save_scan_results_to_chromadb(collection, org_name, scan_result)
+    try:
+        save_scan_results_to_chromadb(collection, org_name, scan_result)
+    except Exception as e:
+        print(f"Failed to save scan results to the database: {e}")
+        return
 
-    # Stage 3: Active Phase
     tools = os.listdir('./tools')
     with ThreadPoolExecutor() as executor:
         futures = []
@@ -219,9 +251,12 @@ def main():
             futures.append(executor.submit(get_tool_decision_for_port, port, tools))
 
         for future in as_completed(futures):
-            tool_name = future.result().split('\n')[0].strip('`')
-            print(f"Selected tool for port: {tool_name}")
-            run_tool(tool_name, org_name)
+            try:
+                tool_name = future.result().split('\n')[0].strip('`')
+                print(f"Selected tool for port: {tool_name}")
+                run_tool(tool_name, org_name)
+            except Exception as e:
+                print(f"Failed to select or run tool: {e}")
 
 if __name__ == "__main__":
     main()
