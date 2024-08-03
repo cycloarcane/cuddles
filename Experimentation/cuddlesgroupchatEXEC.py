@@ -166,7 +166,11 @@ def initiate_group_chat(scan_results, tools_used):
     user_proxy = autogen.UserProxyAgent(
         name="User_proxy",
         system_message="A human admin.",
-        code_execution_config=False,
+        code_execution_config={
+            "last_n_messages": 2,
+            "work_dir": "groupchat",
+            "use_docker": False,
+        },
         human_input_mode="TERMINATE",
     )
     security_analyst = autogen.AssistantAgent(
