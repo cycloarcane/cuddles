@@ -38,7 +38,8 @@
 
 ### Experimental Scripts
 
--- **exmodder** Dynamic exploit modification based on NMAP scan results
+- **exmodder** Dynamic exploit modification based on NMAP scan results
+- **cuddlesgroupchat/EXEC** NMAP scans fed into an autogen groupchat with execution capability
 
 ## How to Contribute
 
