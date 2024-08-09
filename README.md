@@ -36,6 +36,10 @@
 
 ---
 
+### Experimental Scripts
+
+-- **exmodder** Dynamic exploit modification based on NMAP scan results
+
 ## How to Contribute
 
 We welcome contributions! Here's how you can help:
