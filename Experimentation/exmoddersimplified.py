@@ -108,7 +108,7 @@ def modify_exploit_with_llm(exploit_code, ip, port):
     Exploit:
     {exploit_code}
 
-    Ensure the exploit points to the correct target and include any necessary adjustments.
+    Ensure the exploit points to the correct target and include any necessary adjustments but only respond with the modified exploit, no comments or analysis, just the code.
     """
     try:
         response = client.chat.completions.create(
@@ -137,6 +137,8 @@ def run_exploit(filename, ip, port):
     try:
         result = subprocess.run(f"python3 {filename} {ip} {port}", shell=True, capture_output=True, text=True)
         print(f"Exploit run result: {result.stdout}")
+        if result.stderr:
+            print(f"Exploit run error: {result.stderr}")
         return result.stdout
     except Exception as e:
         raise CuddlesException(f"Error running exploit: {str(e)}")
