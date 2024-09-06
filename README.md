@@ -24,7 +24,7 @@
 
 ### Stage Two: Active Scanning - **COMPLETE**
 - **Task:** Run basic active scans on provided targets.
-- **Action:** Gather information (e.g., open ports, detected services) and add it to the ChromaDB database.
+- **Action:** Gather information (e.g., open ports, detected services) and add it to the ChromaDB database to be accessed by later stages.
 
 ### Stage Three: Automated Attack Plan **IN PROGESS**
 - **Task:** Utilize the information from stages one and two.
