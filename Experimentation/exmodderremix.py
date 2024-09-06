@@ -122,7 +122,6 @@ def generate_searchsploit_terms(scan_results):
     except Exception as e:
         raise Exception(f"Error generating searchsploit terms with LLM: {str(e)}")
 
-# 7. Interactive search terms navigation using arrow keys
 def show_search_terms(terms):
     def navigate_menu(stdscr):
         curses.curs_set(0)
@@ -147,10 +146,27 @@ def show_search_terms(terms):
                 current_row -= 1
             elif key == curses.KEY_DOWN and current_row < len(terms) - 1:
                 current_row += 1
-            elif key == curses.KEY_ENTER or key in [10, 13]:
-                break  # Exit on enter key
+            elif key in [10, 13]:  # Enter key is pressed
+                break  # Exit the loop once a term is selected
 
-    curses.wrapper(navigate_menu)
+        return terms[current_row]
+
+    selected_term = curses.wrapper(navigate_menu)
+    print(f"Selected search term: {selected_term}")
+
+    # Step 1: Generate the searchsploit command
+    searchsploit_command = f"searchsploit {selected_term}"
+
+    print(f"Executing: {searchsploit_command}")
+
+    # Step 2: Run the searchsploit command using subprocess
+    try:
+        result = subprocess.run(searchsploit_command.split(), capture_output=True, text=True)
+        print(result.stdout)  # Print the output of the searchsploit command
+    except Exception as e:
+        print(f"Error running searchsploit: {e}")
+
+    return selected_term
 
 # Main program flow
 if __name__ == "__main__":
