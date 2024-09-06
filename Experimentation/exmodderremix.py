@@ -5,6 +5,7 @@ from openai import OpenAI
 import curses
 import subprocess
 client = OpenAI()
+import shutil
 
 # Set your OpenAI API key here
 OpenAI.api_key = os.getenv('OPENAI_API_KEY', 'your-openai-api-key')
@@ -113,7 +114,7 @@ def analyze_scan_results(scan_results):
 
 # 6. Generate searchsploit terms based on scan results using the template
 def generate_searchsploit_terms(scan_results):
-    prompt = f"Generate searchsploit search terms based on the following nmap scan results, but keep it to one word possibly with the version as searchsploit is very specific. For example 'ftp 1.2' or just 'ftp': {scan_results}"
+    prompt = f"Generate searchsploit search terms based on the following nmap scan results, but keep it to one word possibly with the version as searchsploit is very specific. For example 'ftp 1.2' or just 'ftp'. Don't add numbers or list formatting: {scan_results}"
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -125,6 +126,36 @@ def generate_searchsploit_terms(scan_results):
         return search_terms
     except Exception as e:
         raise Exception(f"Error generating searchsploit terms with LLM: {str(e)}")
+
+
+def modify_exploit(exploit_path):
+    modified_exploits_dir = os.path.expanduser('./modified_exploits')
+    os.makedirs(modified_exploits_dir, exist_ok=True)
+
+    new_path = os.path.join(modified_exploits_dir, os.path.basename(exploit_path))
+    shutil.copy2(exploit_path, new_path)
+
+    print(f"Copied exploit to: {new_path}")
+
+    with open(new_path, 'r') as file:
+        content = file.read()
+
+    prompt = f"Suggest modifications for the following exploit code to make it more effective or customized:\n\n{content}"
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=2000
+        )
+        suggestions = response.choices[0].message.content.strip()
+        print(f"Suggested modifications:\n{suggestions}")
+
+        with open(new_path, 'w') as file:
+            file.write(f"# Original code:\n{content}\n\n# Suggested modifications:\n{suggestions}")
+
+        print(f"Modified exploit saved to: {new_path}")
+    except Exception as e:
+        print(f"Error generating modifications: {str(e)}")
 
 def show_search_terms(terms):
     def navigate_menu(stdscr):
@@ -158,25 +189,69 @@ def show_search_terms(terms):
     selected_term = curses.wrapper(navigate_menu)
     print(f"Original selected search term: {selected_term}")
 
-    # Step 1: Clean the selected term to remove unwanted characters
     cleaned_term = clean_search_term(selected_term)
     print(f"Cleaned search term: {cleaned_term}")
 
-    # Step 2: Generate the searchsploit command with the cleaned term
     searchsploit_command = f"searchsploit \"{cleaned_term}\""
 
     print(f"Executing: {searchsploit_command}")
 
-    # Step 3: Run the searchsploit command using subprocess
     try:
         result = subprocess.run(searchsploit_command, shell=True, capture_output=True, text=True)
         print(result.stdout)  # Print the output of the searchsploit command
+
+        if result.returncode == 0:
+            exploit_paths = parse_searchsploit_output(result.stdout)
+            
+            if exploit_paths:
+                selected_exploit = select_exploit(exploit_paths)
+                
+                if selected_exploit:
+                    modify_exploit(selected_exploit)
     except Exception as e:
         print(f"Error running searchsploit: {e}")
 
     return cleaned_term
 
+def parse_searchsploit_output(output):
+    exploit_paths = []
+    for line in output.split('\n'):
+        if '  ' in line:  # Exploits are typically indented
+            path = line.split()[-1]
+            if path.startswith('/usr/share/exploitdb/'):
+                exploit_paths.append(path)
+    return exploit_paths
 
+def select_exploit(exploit_paths):
+    def navigate_menu(stdscr):
+        curses.curs_set(0)
+        current_row = 0
+
+        while True:
+            stdscr.clear()
+            for idx, path in enumerate(exploit_paths):
+                x = 0
+                y = idx
+                if idx == current_row:
+                    stdscr.attron(curses.color_pair(1))
+                    stdscr.addstr(y, x, os.path.basename(path))
+                    stdscr.attroff(curses.color_pair(1))
+                else:
+                    stdscr.addstr(y, x, os.path.basename(path))
+            stdscr.refresh()
+
+            key = stdscr.getch()
+
+            if key == curses.KEY_UP and current_row > 0:
+                current_row -= 1
+            elif key == curses.KEY_DOWN and current_row < len(exploit_paths) - 1:
+                current_row += 1
+            elif key in [10, 13]:  # Enter key is pressed
+                break
+
+        return exploit_paths[current_row]
+
+    return curses.wrapper(navigate_menu)
 # Main program flow
 if __name__ == "__main__":
     setup_database()
