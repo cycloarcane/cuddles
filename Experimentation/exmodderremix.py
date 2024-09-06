@@ -9,6 +9,10 @@ client = OpenAI()
 # Set your OpenAI API key here
 OpenAI.api_key = os.getenv('OPENAI_API_KEY', 'your-openai-api-key')
 
+def clean_search_term(term):
+    # Remove unwanted characters like backticks, asterisks, etc.
+    return term.replace('`', '').replace('*', '').replace('-', '').strip()
+
 # 1. Validate user input for IP address and project name
 def is_valid_ip(ip_address):
     ip_pattern = re.compile(r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$")
@@ -109,7 +113,7 @@ def analyze_scan_results(scan_results):
 
 # 6. Generate searchsploit terms based on scan results using the template
 def generate_searchsploit_terms(scan_results):
-    prompt = f"Generate searchsploit search terms based on the following nmap scan results: {scan_results}"
+    prompt = f"Generate searchsploit search terms based on the following nmap scan results, but keep it to one word possibly with the version as searchsploit is very specific. For example 'ftp 1.2' or just 'ftp': {scan_results}"
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -152,21 +156,26 @@ def show_search_terms(terms):
         return terms[current_row]
 
     selected_term = curses.wrapper(navigate_menu)
-    print(f"Selected search term: {selected_term}")
+    print(f"Original selected search term: {selected_term}")
 
-    # Step 1: Generate the searchsploit command
-    searchsploit_command = f"searchsploit {selected_term}"
+    # Step 1: Clean the selected term to remove unwanted characters
+    cleaned_term = clean_search_term(selected_term)
+    print(f"Cleaned search term: {cleaned_term}")
+
+    # Step 2: Generate the searchsploit command with the cleaned term
+    searchsploit_command = f"searchsploit \"{cleaned_term}\""
 
     print(f"Executing: {searchsploit_command}")
 
-    # Step 2: Run the searchsploit command using subprocess
+    # Step 3: Run the searchsploit command using subprocess
     try:
-        result = subprocess.run(searchsploit_command.split(), capture_output=True, text=True)
+        result = subprocess.run(searchsploit_command, shell=True, capture_output=True, text=True)
         print(result.stdout)  # Print the output of the searchsploit command
     except Exception as e:
         print(f"Error running searchsploit: {e}")
 
-    return selected_term
+    return cleaned_term
+
 
 # Main program flow
 if __name__ == "__main__":
