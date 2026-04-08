@@ -12,7 +12,7 @@ chroma-hnswlib==0.7.3
 chromadb==0.5.3
 click==8.1.7
 coloredlogs==15.0.1
-cryptography==46.0.6
+cryptography==46.0.7
 Deprecated==1.2.14
 distro==1.9.0
 dnspython==2.6.1
