@@ -59,7 +59,7 @@ opentelemetry-util-http==0.46b0
 orjson==3.11.6
 overrides==7.7.0
 packaging==24.1
-paramiko==3.4.0
+paramiko==5.0.0
 pexpect==4.9.0
 posthog==3.5.0
 protobuf==5.29.6
@@ -93,7 +93,7 @@ tqdm==4.66.4
 typer==0.12.3
 typing_extensions==4.12.2
 ujson==5.12.0
-urllib3==2.6.3
+urllib3==2.7.0
 uvicorn==0.30.1
 uvloop==0.19.0
 watchfiles==0.22.0
