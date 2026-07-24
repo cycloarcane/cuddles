@@ -64,7 +64,7 @@ pexpect==4.9.0
 posthog==3.5.0
 protobuf==5.29.6
 ptyprocess==0.7.0
-pyasn1==0.6.3
+pyasn1==0.6.4
 pyasn1_modules==0.4.0
 pycparser==2.22
 pydantic==2.8.2
