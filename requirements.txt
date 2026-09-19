@@ -1,5 +1,5 @@
 annotated-types==0.7.0
-anyio==4.4.0
+anyio==4.14.2
 asgiref==3.8.1
 backoff==2.2.1
 bcrypt==4.1.3
